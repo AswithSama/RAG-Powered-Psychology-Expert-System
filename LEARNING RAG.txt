@@ -1,0 +1,78 @@
+Today you moved from “how does RAG work?” to thinking like a retrieval system designer. You clarified that a loaded PDF using `PyPDFLoader` gives you a list of `Document` objects, where each object contains `page_content` (the actual text) and `metadata` (page number, source, etc.). You understood that a `Document` is not a DataFrame or NumPy array — it is a structured container for unstructured text, designed specifically for NLP and retrieval pipelines.
+
+You developed a clear mental model of the RAG pipeline. Embeddings handle semantic similarity. Metadata provides structural control. The retriever selects relevant chunks. The LLM generates the answer. The LLM does not “think about chapters” or make retrieval decisions — those decisions belong to the retrieval/orchestration layer. That distinction is important architecturally.
+
+You explored different RAG architectures and understood that real systems often combine multiple techniques rather than using naive single-stage retrieval. You learned about metadata-aware RAG, reranked/two-stage RAG, hierarchical (parent–child) RAG, hybrid search, and iterative refinement. You recognized that your psychology textbook is a structured corpus, which makes hierarchical and metadata-aware retrieval especially suitable.
+
+On chunking, you refined your strategy significantly. Instead of random fixed-size chunking across pages, you decided to align chunks with logical textbook structure. Your key insight was: one chunk should never mix content from two different numbered sections (e.g., 6.1 and 6.2). Sections can produce multiple chunks, but chunks should stay inside a single section boundary. That improves semantic purity and retrieval precision. You also understood that overlap is fine as long as it remains inside the same section.
+
+You decided to exclude non-explanatory content such as Introduction, Key Terms, Summary, Review Questions, and similar sections. That reduces retrieval noise and keeps only knowledge-bearing text. You chose to use the Table of Contents to define page ranges and filter the corpus before chunking, which is a clean and pragmatic starting approach.
+
+You implemented a hard-coded page range filtering mechanism and enriched the metadata by adding `chapter_id` (and optionally chapter title). This gives you structural awareness without complex parsing. You now have a filtered set of roughly 494 pages containing only explanatory content, ready for structured chunking.
+
+In short, today you transitioned from learning individual RAG components to designing a structured retrieval system. Tomorrow’s logical next step would be implementing section-aware chunking inside each chapter and then building a clean hierarchical retrieval flow (coarse retrieval → optional rerank/parent expansion → LLM answer generation).
+
+
+## RECURSIVE CHUNKING:
+
+
+
+First, it does not try to “make units that do not exceed chunk size” using the first separator.
+
+It first splits the entire text using the strongest separator (for example \n\n). That gives you paragraph-level units — regardless of their size.
+
+Then it checks each unit:
+
+If a unit ≤ chunk_size, keep it as is.
+
+If a unit > chunk_size, recursively split only that unit using the next separator (like \n).
+
+If it’s still too large, move to the next separator (like . ).
+
+Continue until the piece becomes small enough.
+
+If even splitting by space still gives something too big, it falls back to character-level splitting.
+
+So recursion only happens for units that are too large.
+
+After recursion finishes, you now have a list of units where every unit is ≤ chunk_size.
+
+Now comes the merge phase:
+
+Start building a chunk.
+
+Add the next unit.
+
+If adding another unit would exceed chunk_size, stop.
+
+Finalize the chunk.
+
+Apply overlap if defined.
+
+Start building the next chunk.
+
+One small correction to your statement:
+
+You said:
+
+if no we put one unit as one chunk
+
+That only happens if that single unit by itself is already close to chunk_size. Otherwise, it keeps merging multiple small units into one chunk until it hits the size limit.
+
+So the full process is:
+
+Hierarchical splitting (recursive).
+
+Then greedy merging into chunks.
+
+Then overlap handling.
+
+You’ve understood the core idea correctly.
+
+For someone working on RAG systems like you, the key insight is this:
+Separators determine semantic boundaries.
+Chunk size controls embedding length.
+Merge logic controls retrieval coherence.
+Overlap controls recall stability.
+
+If you internalize those four roles, you fully understand recursive chunking.
