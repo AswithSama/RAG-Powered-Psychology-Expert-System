@@ -1,5 +1,4 @@
 ### The Thinking & The Engineering
-### The Thinking & The Engineering
 
 This project didn’t start with a model. It started with an 800-page psychology textbook and one slightly dangerous thought: “How hard can this be?”
 
